@@ -14,22 +14,24 @@ import (
 )
 
 type Runner struct {
-	Id          string
-	owner       string
-	repo        string
-	githubToken string
-	errCh       chan RunnerExitInfo
-	stopCh      chan struct{}
+	Id                string
+	owner             string
+	repo              string
+	githubToken       string
+	RunnerGroupConfig *RunnerGroupConfig
+	errCh             chan RunnerExitInfo
+	stopCh            chan struct{}
 }
 
-func NewRunner(id string, owner, repo, githubToken string) Runner {
+func NewRunner(id string, runnerGroupConfig *RunnerGroupConfig) Runner {
 	return Runner{
-		Id:          id,
-		owner:       owner,
-		repo:        repo,
-		githubToken: githubToken,
-		errCh:       make(chan RunnerExitInfo, 0),
-		stopCh:      make(chan struct{}, 0),
+		Id:                id,
+		owner:             runnerGroupConfig.GitHubOwner,
+		repo:              runnerGroupConfig.GitHubRepository,
+		githubToken:       runnerGroupConfig.GitHubToken,
+		RunnerGroupConfig: runnerGroupConfig,
+		errCh:             make(chan RunnerExitInfo, 0),
+		stopCh:            make(chan struct{}, 0),
 	}
 }
 
@@ -46,11 +48,11 @@ func (r *Runner) constructExitInfo(err error) RunnerExitInfo {
 }
 
 func (r *Runner) logger() *slog.Logger {
-	return slog.With("owner", r.owner, "repository", r.repo, "runner_name", r.runnerName())
+	return slog.With("owner", r.owner, "repository", r.repo, "runner_group", r.RunnerGroupConfig.Name, "runner_name", r.runnerName())
 }
 
 func (r *Runner) runnerName() string {
-	return fmt.Sprintf("runner-%s", r.Id)
+	return fmt.Sprintf("%s-%s", r.RunnerGroupConfig.Name, r.Id)
 }
 
 func (r *Runner) Run(ctx context.Context, wg *sync.WaitGroup) {

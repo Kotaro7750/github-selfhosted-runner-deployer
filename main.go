@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log/slog"
 	"maps"
 	"os"
@@ -15,15 +16,6 @@ import (
 
 var runners = make(map[string]Runner, 0)
 
-func getEnvOrExit(key string) string {
-	value := os.Getenv(key)
-	if value == "" {
-		slog.Error("Required environment variable not set", "variable", key)
-		os.Exit(1)
-	}
-	return value
-}
-
 func main() {
 	// Set up structured logger
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
@@ -31,12 +23,22 @@ func main() {
 	}))
 	slog.SetDefault(logger)
 
-	// Validate required environment variables
-	githubOwner := getEnvOrExit("GITHUB_OWNER")
-	githubRepo := getEnvOrExit("GITHUB_REPO")
-	githubToken := getEnvOrExit("GITHUB_TOKEN")
+	var configPath string
+	flag.StringVar(&configPath, "config", "", "Path to configuration file")
+	flag.Parse()
 
-	slog.Info("GitHub configuration loaded", "owner", githubOwner, "repo", githubRepo)
+	if configPath == "" {
+		slog.Error("Configuration file path is required", "usage", "Use -config flag to specify config file path")
+		os.Exit(1)
+	}
+
+	config, err := LoadConfig(configPath)
+	if err != nil {
+		slog.Error("Failed to load configuration", "error", err)
+		os.Exit(1)
+	}
+
+	slog.Info("Configuration loaded", "runner_groups", len(config.RunnerGroups))
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
@@ -47,7 +49,7 @@ func main() {
 
 	go func(ctx context.Context) {
 		for {
-			createRunners(context.TODO(), &wg, githubOwner, githubRepo, githubToken)
+			createRunners(context.TODO(), &wg, config)
 
 			exitInfoCh := orRunnerCh(slices.Collect(maps.Values(runners)))
 
@@ -85,9 +87,30 @@ func main() {
 
 }
 
-func createRunners(ctx context.Context, wg *sync.WaitGroup, githubOwner, githubRepo, githubToken string) {
-	createCount := 2 - len(runners)
+func createRunners(ctx context.Context, wg *sync.WaitGroup, config *Config) {
+	if len(config.RunnerGroups) == 0 {
+		return
+	}
 
+	for _, runnerGroup := range config.RunnerGroups {
+		createRunnersForGroup(ctx, wg, &runnerGroup)
+	}
+}
+
+func createRunnersForGroup(ctx context.Context, wg *sync.WaitGroup, runnerGroupConfig *RunnerGroupConfig) {
+	// 1. Check how many runners are already running for this group
+	existingCount := 0
+	// XXX Simple but inefficient way
+	for _, runner := range runners {
+		if runner.RunnerGroupConfig != nil && runner.RunnerGroupConfig.Name == runnerGroupConfig.Name {
+			existingCount++
+		}
+	}
+
+	// 2. Determine how many more runners to create
+	createCount := runnerGroupConfig.Count - existingCount
+
+	// 3. Create the required number of runners in goroutines
 	for i := 0; i < createCount; i++ {
 		var id string
 
@@ -101,7 +124,7 @@ func createRunners(ctx context.Context, wg *sync.WaitGroup, githubOwner, githubR
 			}
 		}
 
-		runner := NewRunner(id, githubOwner, githubRepo, githubToken)
+		runner := NewRunner(id, runnerGroupConfig)
 		runners[id] = runner
 
 		go runner.Run(ctx, wg)

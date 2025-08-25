@@ -7,6 +7,7 @@ require (
 	github.com/google/go-github/v74 v74.0.0
 	github.com/google/uuid v1.6.0
 	github.com/opencontainers/image-spec v1.1.1
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
