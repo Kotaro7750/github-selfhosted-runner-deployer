@@ -26,6 +26,7 @@ Sample configuration is provided in [`sample_config.yaml`](./sample_config.yaml)
 | `defaultGithubToken` | Default GitHub Personal Access Token | Yes* | `DEFAULT_GITHUB_TOKEN` | `ghp_xxxxxxxxxxxx` |
 | `defaultLabels` | Default labels for all runner groups | No | `DEFAULT_LABELS` | `["linux", "x64"]` or `linux,x64` for environment variable |
 | `defaultNoDefaultLabels` | Disable default labels for all runner groups | No | `DEFAULT_NO_DEFAULT_LABELS` | `false` |
+| `defaultImage` | Default container image for all runner groups | No | `DEFAULT_IMAGE` | `ghcr.io/actions/actions-runner:latest` |
 | `runnerGroups[].name` | Runner group name (alphanumeric, hyphens, underscores only) | Yes | - | `production-runners` |
 | `runnerGroups[].count` | Number of runners in this group | Yes | - | `3` |
 | `runnerGroups[].githubOwner` | Override GitHub owner for this group | No | - | `different-owner` |
@@ -33,6 +34,7 @@ Sample configuration is provided in [`sample_config.yaml`](./sample_config.yaml)
 | `runnerGroups[].githubToken` | Override GitHub token for this group | No | - | `ghp_yyyyyyyy` |
 | `runnerGroups[].labels` | Override labels for this group | No | - | `["gpu", "high-memory"]` |
 | `runnerGroups[].noDefaultLabels` | Disable default labels for this group | No | - | `true` |
+| `runnerGroups[].image` | Override container image for this group | No | - | `ghcr.io/actions/actions-runner:2.327.1` |
 
 *Required either as default values or specified individually for each runner group.
 Environment variables take precedence over configuration file values.

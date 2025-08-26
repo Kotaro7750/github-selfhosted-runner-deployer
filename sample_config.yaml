@@ -7,6 +7,8 @@ defaultLabels:
   - "x64"
 # Optional: Disable default labels for all runner groups (default: false)
 defaultNoDefaultLabels: false
+# Optional: Default container image for all runner groups
+defaultImage: "ghcr.io/actions/actions-runner:latest"
 
 runnerGroups:
   - name: group-1
@@ -27,3 +29,5 @@ runnerGroups:
       - "high-memory"
     # Example: Disable default labels for this specific group
     noDefaultLabels: true
+    # Example: Override container image for this specific group
+    image: "ghcr.io/actions/actions-runner:2.327.1"

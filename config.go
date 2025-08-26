@@ -16,6 +16,7 @@ type Config struct {
 	DefaultGitHubToken      string              `yaml:"defaultGithubToken"`
 	DefaultLabels           []string            `yaml:"defaultLabels"`
 	DefaultNoDefaultLabels  bool                `yaml:"defaultNoDefaultLabels"`
+	DefaultImage            string              `yaml:"defaultImage"`
 	RunnerGroups            []RunnerGroupConfig `yaml:"runnerGroups"`
 }
 
@@ -27,6 +28,7 @@ type RunnerGroupConfig struct {
 	GitHubToken      string   `yaml:"githubToken"`
 	Labels           []string `yaml:"labels"`
 	NoDefaultLabels  *bool    `yaml:"noDefaultLabels"`
+	Image            string   `yaml:"image"`
 }
 
 func LoadConfig(configPath string) (*Config, error) {
@@ -86,6 +88,11 @@ func overrideWithEnvironmentVariable(config *Config) {
 			slog.Info("Override defaultNoDefaultLabels with env: false")
 			config.DefaultNoDefaultLabels = false
 		}
+	}
+
+	if image := os.Getenv("DEFAULT_IMAGE"); image != "" {
+		slog.Info(fmt.Sprintf("Override defaultImage with env: %s", image))
+		config.DefaultImage = image
 	}
 }
 
@@ -147,6 +154,14 @@ func (c *Config) canonicalize() {
 
 		if runnerConfig.NoDefaultLabels == nil {
 			c.RunnerGroups[i].NoDefaultLabels = &c.DefaultNoDefaultLabels
+		}
+
+		if runnerConfig.Image == "" {
+			if c.DefaultImage == "" {
+				c.RunnerGroups[i].Image = "ghcr.io/actions/actions-runner"
+			} else {
+				c.RunnerGroups[i].Image = c.DefaultImage
+			}
 		}
 	}
 }

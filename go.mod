@@ -3,6 +3,7 @@ module github.com/Kotaro7750/github-selfhosted-runner-deployer
 go 1.23.3
 
 require (
+	github.com/containerd/errdefs v1.0.0
 	github.com/docker/docker v28.3.1+incompatible
 	github.com/google/go-github/v74 v74.0.0
 	github.com/google/uuid v1.6.0
@@ -12,7 +13,6 @@ require (
 
 require (
 	github.com/Microsoft/go-winio v0.4.21 // indirect
-	github.com/containerd/errdefs v1.0.0 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/distribution/reference v0.6.0 // indirect

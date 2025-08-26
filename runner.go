@@ -3,10 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"sync"
 
+	"github.com/containerd/errdefs"
 	"github.com/docker/docker/api/types/container"
+	sdkImage "github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/google/go-github/v74/github"
@@ -75,6 +78,26 @@ func (r *Runner) Run(ctx context.Context, wg *sync.WaitGroup) {
 		return
 	}
 
+	image := r.RunnerGroupConfig.Image
+
+	_, err = dockerClient.ImageInspect(ctx, image)
+	if err != nil {
+		if errdefs.IsNotFound(err) {
+			r.logger().Info("Pulling container image", "image", image)
+
+			res, err := dockerClient.ImagePull(ctx, image, sdkImage.PullOptions{})
+			if err != nil {
+				r.errCh <- r.constructExitInfo(fmt.Errorf("Error pulling container image '%s': %w", image, err))
+				return
+			}
+			defer res.Close()
+			io.Copy(io.Discard, res) // Ensure the output is fully read
+
+		} else {
+			r.errCh <- r.constructExitInfo(fmt.Errorf("Error inspecting container image '%s': %w", image, err))
+		}
+	}
+
 	// Build config.sh command with labels if configured
 	configCmd := fmt.Sprintf("./config.sh --url https://github.com/%s/%s --name %s --token %s --unattended --ephemeral", r.owner, r.repo, r.runnerName(), *token.Token)
 
@@ -96,7 +119,7 @@ func (r *Runner) Run(ctx context.Context, wg *sync.WaitGroup) {
 	}
 
 	containerConfig := &container.Config{
-		Image:      "ghcr.io/actions/actions-runner",
+		Image:      image,
 		Entrypoint: []string{"sh", "-c", configCmd + "; ./run.sh"},
 	}
 	hostConfig := &container.HostConfig{
@@ -118,6 +141,8 @@ func (r *Runner) Run(ctx context.Context, wg *sync.WaitGroup) {
 	}
 
 	waitCh, containerErrCh := dockerClient.ContainerWait(ctx, containerId, container.WaitConditionNotRunning)
+
+	r.logger().Info("Runner started successfully and is now waiting for jobs")
 
 	select {
 	case err := <-containerErrCh:
