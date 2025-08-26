@@ -10,7 +10,7 @@ import (
 	"syscall"
 )
 
-var runners = make(map[string]Runner, 0)
+var scheduler = NewScheduler()
 
 func main() {
 	// Set up structured logger
@@ -65,7 +65,7 @@ func main() {
 
 	cancel()
 
-	for _, runner := range runners {
+	for runner := range scheduler.Runners() {
 		runner.SendTerminate()
 
 		go func() {
@@ -91,7 +91,7 @@ func createRunnersForGroup(ctx context.Context, wg *sync.WaitGroup, runnerGroupC
 	// 1. Check how many runners are already running for this group
 	existingCount := 0
 	// XXX Simple but inefficient way
-	for _, runner := range runners {
+	for runner := range scheduler.Runners() {
 		if runner.RunnerGroupConfig != nil && runner.RunnerGroupConfig.Name == runnerGroupConfig.Name {
 			existingCount++
 		}
@@ -109,10 +109,7 @@ func createRunnersForGroup(ctx context.Context, wg *sync.WaitGroup, runnerGroupC
 // Launch a single runner and is responsible for its lifecycle
 // When runner exits with error, notify via channel and remove it from the global map
 func launchRunner(ctx context.Context, runnerGroupConfig *RunnerGroupConfig, wg *sync.WaitGroup, runnerChangedCh chan<- struct{}) {
-	id := generateRunnerID()
-
-	runner := NewRunner(id, runnerGroupConfig)
-	runners[id] = runner
+	runner := scheduler.NewRunner(runnerGroupConfig)
 
 	go runner.Run(ctx, wg)
 
@@ -129,6 +126,6 @@ func launchRunner(ctx context.Context, runnerGroupConfig *RunnerGroupConfig, wg 
 		case <-ctx.Done():
 		}
 
-		delete(runners, id)
+		scheduler.RemoveRunner(runner.Id)
 	}()
 }
