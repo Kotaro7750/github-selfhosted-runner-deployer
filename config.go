@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"regexp"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -13,15 +14,19 @@ type Config struct {
 	DefaultGitHubOwner      string              `yaml:"defaultGithubOwner"`
 	DefaultGitHubRepository string              `yaml:"defaultGithubRepository"`
 	DefaultGitHubToken      string              `yaml:"defaultGithubToken"`
+	DefaultLabels           []string            `yaml:"defaultLabels"`
+	DefaultNoDefaultLabels  bool                `yaml:"defaultNoDefaultLabels"`
 	RunnerGroups            []RunnerGroupConfig `yaml:"runnerGroups"`
 }
 
 type RunnerGroupConfig struct {
-	Name             string `yaml:"name"`
-	Count            int    `yaml:"count"`
-	GitHubOwner      string `yaml:"githubOwner"`
-	GitHubRepository string `yaml:"githubRepository"`
-	GitHubToken      string `yaml:"githubToken"`
+	Name             string   `yaml:"name"`
+	Count            int      `yaml:"count"`
+	GitHubOwner      string   `yaml:"githubOwner"`
+	GitHubRepository string   `yaml:"githubRepository"`
+	GitHubToken      string   `yaml:"githubToken"`
+	Labels           []string `yaml:"labels"`
+	NoDefaultLabels  *bool    `yaml:"noDefaultLabels"`
 }
 
 func LoadConfig(configPath string) (*Config, error) {
@@ -60,6 +65,27 @@ func overrideWithEnvironmentVariable(config *Config) {
 	if githubToken := os.Getenv("DEFAULT_GITHUB_TOKEN"); githubToken != "" {
 		slog.Info("Override defaultGithubToken with env: [REDACTED]")
 		config.DefaultGitHubToken = githubToken
+	}
+
+	if labels := os.Getenv("DEFAULT_LABELS"); labels != "" {
+		labelList := strings.Split(labels, ",")
+
+		for i, label := range labelList {
+			labelList[i] = strings.TrimSpace(label)
+		}
+
+		slog.Info(fmt.Sprintf("Override defaultLabels with env: %v", labelList))
+		config.DefaultLabels = labelList
+	}
+
+	if noDefaultLabels := os.Getenv("DEFAULT_NO_DEFAULT_LABELS"); noDefaultLabels != "" {
+		if noDefaultLabels == "true" || noDefaultLabels == "1" {
+			slog.Info("Override defaultNoDefaultLabels with env: true")
+			config.DefaultNoDefaultLabels = true
+		} else if noDefaultLabels == "false" || noDefaultLabels == "0" {
+			slog.Info("Override defaultNoDefaultLabels with env: false")
+			config.DefaultNoDefaultLabels = false
+		}
 	}
 }
 
@@ -113,6 +139,14 @@ func (c *Config) canonicalize() {
 
 		if runnerConfig.GitHubToken == "" {
 			c.RunnerGroups[i].GitHubToken = c.DefaultGitHubToken
+		}
+
+		if len(runnerConfig.Labels) == 0 && len(c.DefaultLabels) > 0 {
+			c.RunnerGroups[i].Labels = c.DefaultLabels
+		}
+
+		if runnerConfig.NoDefaultLabels == nil {
+			c.RunnerGroups[i].NoDefaultLabels = &c.DefaultNoDefaultLabels
 		}
 	}
 }

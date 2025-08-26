@@ -75,9 +75,29 @@ func (r *Runner) Run(ctx context.Context, wg *sync.WaitGroup) {
 		return
 	}
 
+	// Build config.sh command with labels if configured
+	configCmd := fmt.Sprintf("./config.sh --url https://github.com/%s/%s --name %s --token %s --unattended --ephemeral", r.owner, r.repo, r.runnerName(), *token.Token)
+
+	if len(r.RunnerGroupConfig.Labels) > 0 {
+		labels := ""
+		for i, label := range r.RunnerGroupConfig.Labels {
+			if i > 0 {
+				labels += ","
+			}
+			labels += label
+		}
+		configCmd += fmt.Sprintf(" --labels %s", labels)
+	}
+
+	// Add --no-default-labels option if configured
+	// The canonicalize function ensures NoDefaultLabels is never nil
+	if r.RunnerGroupConfig.NoDefaultLabels != nil && *r.RunnerGroupConfig.NoDefaultLabels {
+		configCmd += " --no-default-labels"
+	}
+
 	containerConfig := &container.Config{
 		Image:      "ghcr.io/actions/actions-runner",
-		Entrypoint: []string{"sh", "-c", fmt.Sprintf("./config.sh --url https://github.com/%s/%s --name %s --token %s --unattended --ephemeral; ./run.sh", r.owner, r.repo, r.runnerName(), *token.Token)},
+		Entrypoint: []string{"sh", "-c", configCmd + "; ./run.sh"},
 	}
 	hostConfig := &container.HostConfig{
 		AutoRemove: true,

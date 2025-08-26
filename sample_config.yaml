@@ -1,6 +1,12 @@
 defaultGithubOwner: "sample_owner"
 defaultGithubRepository: "sample_repo"
 defaultGithubToken: "REPLACE_HERE"
+# Optional: Default labels for all runner groups
+defaultLabels:
+  - "linux"
+  - "x64"
+# Optional: Disable default labels for all runner groups (default: false)
+defaultNoDefaultLabels: false
 
 runnerGroups:
   - name: group-1
@@ -9,5 +15,15 @@ runnerGroups:
     # githubOwner: "specific-owner"
     # githubRepository: "specific-repo"
     # githubToken: "specific-token"
+    # labels:
+    #   - "custom-label"
+    #   - "group-specific"
+    # noDefaultLabels: true
   - name: group-2
     count: 1
+    # Example: Override labels for this specific group
+    labels:
+      - "gpu"
+      - "high-memory"
+    # Example: Disable default labels for this specific group
+    noDefaultLabels: true
