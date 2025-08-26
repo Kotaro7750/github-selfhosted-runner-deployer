@@ -4,14 +4,10 @@ import (
 	"context"
 	"flag"
 	"log/slog"
-	"maps"
 	"os"
 	"os/signal"
-	"slices"
 	"sync"
 	"syscall"
-
-	"github.com/google/uuid"
 )
 
 var runners = make(map[string]Runner, 0)
@@ -41,30 +37,25 @@ func main() {
 	slog.Info("Configuration loaded", "runner_groups", len(config.RunnerGroups))
 
 	sigCh := make(chan os.Signal, 1)
+	defer close(sigCh)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 
 	wg := sync.WaitGroup{}
+	runnerChangedCh := make(chan struct{})
+	defer close(runnerChangedCh)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
+	// main schedule loop
 	go func(ctx context.Context) {
 		for {
-			createRunners(context.TODO(), &wg, config)
-
-			exitInfoCh := orRunnerCh(slices.Collect(maps.Values(runners)))
+			slog.Info("Scheduling runners")
+			createRunners(context.TODO(), &wg, config, runnerChangedCh)
 
 			select {
-			case exitInfo := <-exitInfoCh:
-				if exitInfo.Err != nil {
-					slog.Error("Runner error", "runner_id", exitInfo.RunnerId, "error", exitInfo.Err)
-				} else {
-					slog.Info("Runner exited normally", "runner_id", exitInfo.RunnerId)
-				}
-
-				delete(runners, exitInfo.RunnerId)
-
 			case <-ctx.Done():
 				return
+			case <-runnerChangedCh:
 			}
 		}
 	}(ctx)
@@ -84,20 +75,19 @@ func main() {
 
 	wg.Wait()
 	slog.Info("All runners have exited. Shutdown complete.")
-
 }
 
-func createRunners(ctx context.Context, wg *sync.WaitGroup, config *Config) {
+func createRunners(ctx context.Context, wg *sync.WaitGroup, config *Config, runnerChangedCh chan<- struct{}) {
 	if len(config.RunnerGroups) == 0 {
 		return
 	}
 
 	for _, runnerGroup := range config.RunnerGroups {
-		createRunnersForGroup(ctx, wg, &runnerGroup)
+		createRunnersForGroup(ctx, wg, &runnerGroup, runnerChangedCh)
 	}
 }
 
-func createRunnersForGroup(ctx context.Context, wg *sync.WaitGroup, runnerGroupConfig *RunnerGroupConfig) {
+func createRunnersForGroup(ctx context.Context, wg *sync.WaitGroup, runnerGroupConfig *RunnerGroupConfig, runnerChangedCh chan<- struct{}) {
 	// 1. Check how many runners are already running for this group
 	existingCount := 0
 	// XXX Simple but inefficient way
@@ -112,21 +102,33 @@ func createRunnersForGroup(ctx context.Context, wg *sync.WaitGroup, runnerGroupC
 
 	// 3. Create the required number of runners in goroutines
 	for i := 0; i < createCount; i++ {
-		var id string
+		launchRunner(ctx, runnerGroupConfig, wg, runnerChangedCh)
+	}
+}
 
-	GEN_ID:
-		for {
-			id = uuid.NewString()
+// Launch a single runner and is responsible for its lifecycle
+// When runner exits with error, notify via channel and remove it from the global map
+func launchRunner(ctx context.Context, runnerGroupConfig *RunnerGroupConfig, wg *sync.WaitGroup, runnerChangedCh chan<- struct{}) {
+	id := generateRunnerID()
 
-			_, exist := runners[id]
-			if !exist {
-				break GEN_ID
+	runner := NewRunner(id, runnerGroupConfig)
+	runners[id] = runner
+
+	go runner.Run(ctx, wg)
+
+	go func() {
+		select {
+		case exitInfo := <-runner.errCh:
+			if exitInfo.Err != nil {
+				runner.logger().Error("Runner exited with error", "error", exitInfo.Err)
+			} else {
+				runner.logger().Info("Runner exited normally")
 			}
+
+			runnerChangedCh <- struct{}{}
+		case <-ctx.Done():
 		}
 
-		runner := NewRunner(id, runnerGroupConfig)
-		runners[id] = runner
-
-		go runner.Run(ctx, wg)
-	}
+		delete(runners, id)
+	}()
 }
