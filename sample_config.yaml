@@ -1,0 +1,13 @@
+defaultGithubOwner: "sample_owner"
+defaultGithubRepository: "sample_repo"
+defaultGithubToken: "REPLACE_HERE"
+
+runnerGroups:
+  - name: group-1
+    count: 3
+    # Optional: Override default settings for this group
+    # githubOwner: "specific-owner"
+    # githubRepository: "specific-repo"
+    # githubToken: "specific-token"
+  - name: group-2
+    count: 1

@@ -10,41 +10,28 @@ An application that automatically deploys and manages self-hosted runners for Gi
 ## Configuration
 
 The application uses a YAML configuration file to define GitHub settings and runner groups.
+Some settings can also be overridden using environment variables.
 
 ### Configuration File Format
 
-Create a YAML configuration file with the following structure:
-
-```yaml
-defaultGithubOwner: "your-github-username"
-defaultGithubRepository: "your-repository-name"
-defaultGithubToken: "your-github-token"
-
-runnerGroups:
-  - name: group-1
-    count: 3
-    # Optional: Override default settings for this group
-    # githubOwner: "specific-owner"
-    # githubRepository: "specific-repo"
-    # githubToken: "specific-token"
-  - name: group-2
-    count: 1
-```
+Create a YAML configuration file.
+Sample configuration is provided in [`sample_config.yaml`](./sample_config.yaml).
 
 ### Configuration Fields
 
-| Field | Description | Required | Example |
-|-------|-------------|----------|---------|
-| `defaultGithubOwner` | Default GitHub repository owner name | Yes* | `Kotaro7750` |
-| `defaultGithubRepository` | Default GitHub repository name | Yes* | `my-repo` |
-| `defaultGithubToken` | Default GitHub Personal Access Token | Yes* | `ghp_xxxxxxxxxxxx` |
-| `runnerGroups[].name` | Runner group name (alphanumeric, hyphens, underscores only) | Yes | `production-runners` |
-| `runnerGroups[].count` | Number of runners in this group | Yes | `3` |
-| `runnerGroups[].githubOwner` | Override GitHub owner for this group | No | `different-owner` |
-| `runnerGroups[].githubRepository` | Override GitHub repository for this group | No | `different-repo` |
-| `runnerGroups[].githubToken` | Override GitHub token for this group | No | `ghp_yyyyyyyy` |
+| Field | Description | Required | Environment Variable | Example |
+|-------|-------------|----------|---------------------|---------|
+| `defaultGithubOwner` | Default GitHub repository owner name | Yes* | `DEFAULT_GITHUB_OWNER` | `Kotaro7750` |
+| `defaultGithubRepository` | Default GitHub repository name | Yes* | `DEFAULT_GITHUB_REPOSITORY` | `my-repo` |
+| `defaultGithubToken` | Default GitHub Personal Access Token | Yes* | `DEFAULT_GITHUB_TOKEN` | `ghp_xxxxxxxxxxxx` |
+| `runnerGroups[].name` | Runner group name (alphanumeric, hyphens, underscores only) | Yes | - | `production-runners` |
+| `runnerGroups[].count` | Number of runners in this group | Yes | - | `3` |
+| `runnerGroups[].githubOwner` | Override GitHub owner for this group | No | - | `different-owner` |
+| `runnerGroups[].githubRepository` | Override GitHub repository for this group | No | - | `different-repo` |
+| `runnerGroups[].githubToken` | Override GitHub token for this group | No | - | `ghp_yyyyyyyy` |
 
 *Required either as default values or specified individually for each runner group.
+Environment variables take precedence over configuration file values.
 
 ### GitHub Token Permissions
 

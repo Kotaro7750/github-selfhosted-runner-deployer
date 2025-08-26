@@ -27,4 +27,4 @@ COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /app/github-selfhosted-runner-deployer /github-selfhosted-runner-deployer
 
 # Run the application
-CMD ["/github-selfhosted-runner-deployer"]
+ENTRYPOINT ["/github-selfhosted-runner-deployer"]

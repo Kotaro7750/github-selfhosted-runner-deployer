@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"regexp"
 
@@ -34,6 +35,8 @@ func LoadConfig(configPath string) (*Config, error) {
 		return nil, fmt.Errorf("Cannot parse config file: %s, err: %w", configPath, err)
 	}
 
+	overrideWithEnvironmentVariable(config)
+
 	if err := validateConfig(config); err != nil {
 		return nil, fmt.Errorf("Invalid config file: %s, err: %w", configPath, err)
 	}
@@ -41,6 +44,23 @@ func LoadConfig(configPath string) (*Config, error) {
 	config.canonicalize()
 
 	return config, nil
+}
+
+func overrideWithEnvironmentVariable(config *Config) {
+	if githubOwner := os.Getenv("DEFAULT_GITHUB_OWNER"); githubOwner != "" {
+		slog.Info(fmt.Sprintf("Override defaultGithubOwner with env: %s", githubOwner))
+		config.DefaultGitHubOwner = githubOwner
+	}
+
+	if githubRepo := os.Getenv("DEFAULT_GITHUB_REPOSITORY"); githubRepo != "" {
+		slog.Info(fmt.Sprintf("Override defaultGithubRepository with env: %s", githubRepo))
+		config.DefaultGitHubRepository = githubRepo
+	}
+
+	if githubToken := os.Getenv("DEFAULT_GITHUB_TOKEN"); githubToken != "" {
+		slog.Info("Override defaultGithubToken with env: [REDACTED]")
+		config.DefaultGitHubToken = githubToken
+	}
 }
 
 func validateConfig(config *Config) error {
