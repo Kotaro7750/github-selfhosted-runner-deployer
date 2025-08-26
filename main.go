@@ -48,13 +48,21 @@ func main() {
 
 	// main schedule loop
 	go func(ctx context.Context) {
+	LOOP:
 		for {
 			slog.Info("Scheduling runners")
 			createRunners(context.TODO(), &wg, config, runnerChangedCh)
 
 			select {
 			case <-ctx.Done():
-				return
+				break LOOP
+			case <-runnerChangedCh:
+			}
+		}
+
+		// Consume all remaining signals to avoid blocking while shutting down
+		for {
+			select {
 			case <-runnerChangedCh:
 			}
 		}
@@ -114,6 +122,9 @@ func launchRunner(ctx context.Context, runnerGroupConfig *RunnerGroupConfig, wg 
 	go runner.Run(ctx, wg)
 
 	go func() {
+		wg.Add(1)
+		defer wg.Done()
+
 		select {
 		case exitInfo := <-runner.errCh:
 			if exitInfo.Err != nil {
