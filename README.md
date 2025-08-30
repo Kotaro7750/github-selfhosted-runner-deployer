@@ -28,7 +28,7 @@ Sample configuration is provided in [`sample_config.yaml`](./sample_config.yaml)
 | `defaultNoDefaultLabels` | Disable default labels for all runner groups | No | `DEFAULT_NO_DEFAULT_LABELS` | `false` |
 | `defaultImage` | Default container image for all runner groups | No | `DEFAULT_IMAGE` | `ghcr.io/actions/actions-runner:latest` |
 | `defaultEnvVars` | Default environment variables for all runner groups (YAML map). Merged with environment variable; environment variable takes precedence | No | `DEFAULT_ENV_VARS` (JSON string) | `{"NODE_ENV": "production", "LOG_LEVEL": "info"}` |
-| `runnerGroups[].name` | Runner group name (alphanumeric, hyphens, underscores only) | Yes | - | `production-runners` |
+| `runnerGroups[].name` | Runner group name (alphanumeric, hyphens, underscores only, max 20 characters) | Yes | - | `production-runners` |
 | `runnerGroups[].count` | Number of runners in this group | Yes | - | `3` |
 | `runnerGroups[].githubOwner` | Override GitHub owner for this group | No | - | `different-owner` |
 | `runnerGroups[].githubRepository` | Override GitHub repository for this group | No | - | `different-repo` |

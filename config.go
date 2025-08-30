@@ -134,10 +134,15 @@ func validateConfig(config *Config) error {
 	}
 
 	allowedNamePattern := regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+	maxNameLength := 20 // Maximum length for runner group name (considering UUID will be appended)
 
 	for _, runnerConfig := range config.RunnerGroups {
 		if runnerConfig.Name == "" {
 			return fmt.Errorf("runner group name is required")
+		}
+
+		if len(runnerConfig.Name) > maxNameLength {
+			return fmt.Errorf("runner group name '%s' exceeds maximum length of %d characters", runnerConfig.Name, maxNameLength)
 		}
 
 		if !allowedNamePattern.MatchString(runnerConfig.Name) {
