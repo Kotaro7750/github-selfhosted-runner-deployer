@@ -9,6 +9,10 @@ defaultLabels:
 defaultNoDefaultLabels: false
 # Optional: Default container image for all runner groups
 defaultImage: "ghcr.io/actions/actions-runner:latest"
+# Optional: Default environment variables for all runner groups
+defaultEnvVars:
+  ENV1: "value1"
+  ENV2: "value2"
 
 runnerGroups:
   - name: group-1
@@ -21,6 +25,10 @@ runnerGroups:
     #   - "custom-label"
     #   - "group-specific"
     # noDefaultLabels: true
+    # Optional: Runner group specific environment variables. These will override defaultEnvVars if keys overlap.
+    # envVars:
+    #   CUSTOM_ENV: "custom1"
+    #   ENV2: "custom2"
   - name: group-2
     count: 1
     # Example: Override labels for this specific group

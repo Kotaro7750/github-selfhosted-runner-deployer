@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -10,6 +11,20 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Parse environment variables from a JSON string
+func parseEnvVarsString(envVarsStr string) (map[string]string, error) {
+	envVarMap := make(map[string]string)
+	if envVarsStr == "" {
+		return envVarMap, nil
+	}
+
+	if err := json.Unmarshal([]byte(envVarsStr), &envVarMap); err != nil {
+		return nil, fmt.Errorf("failed to parse environment variables as JSON: %w", err)
+	}
+
+	return envVarMap, nil
+}
+
 type Config struct {
 	DefaultGitHubOwner      string              `yaml:"defaultGithubOwner"`
 	DefaultGitHubRepository string              `yaml:"defaultGithubRepository"`
@@ -17,18 +32,20 @@ type Config struct {
 	DefaultLabels           []string            `yaml:"defaultLabels"`
 	DefaultNoDefaultLabels  bool                `yaml:"defaultNoDefaultLabels"`
 	DefaultImage            string              `yaml:"defaultImage"`
+	DefaultEnvVars          map[string]string   `yaml:"defaultEnvVars"`
 	RunnerGroups            []RunnerGroupConfig `yaml:"runnerGroups"`
 }
 
 type RunnerGroupConfig struct {
-	Name             string   `yaml:"name"`
-	Count            int      `yaml:"count"`
-	GitHubOwner      string   `yaml:"githubOwner"`
-	GitHubRepository string   `yaml:"githubRepository"`
-	GitHubToken      string   `yaml:"githubToken"`
-	Labels           []string `yaml:"labels"`
-	NoDefaultLabels  *bool    `yaml:"noDefaultLabels"`
-	Image            string   `yaml:"image"`
+	Name             string            `yaml:"name"`
+	Count            int               `yaml:"count"`
+	GitHubOwner      string            `yaml:"githubOwner"`
+	GitHubRepository string            `yaml:"githubRepository"`
+	GitHubToken      string            `yaml:"githubToken"`
+	Labels           []string          `yaml:"labels"`
+	NoDefaultLabels  *bool             `yaml:"noDefaultLabels"`
+	Image            string            `yaml:"image"`
+	EnvVars          map[string]string `yaml:"envVars"`
 }
 
 func LoadConfig(configPath string) (*Config, error) {
@@ -93,6 +110,21 @@ func overrideWithEnvironmentVariable(config *Config) {
 	if image := os.Getenv("DEFAULT_IMAGE"); image != "" {
 		slog.Info(fmt.Sprintf("Override defaultImage with env: %s", image))
 		config.DefaultImage = image
+	}
+
+	if envVars := os.Getenv("DEFAULT_ENV_VARS"); envVars != "" {
+		envVarMap, err := parseEnvVarsString(envVars)
+		if err != nil {
+			slog.Error("Failed to parse DEFAULT_ENV_VARS. Skipping", "error", err)
+		} else {
+			slog.Info(fmt.Sprintf("Merge defaultEnvVars and env: [REDACTED]"))
+			if config.DefaultEnvVars == nil {
+				config.DefaultEnvVars = make(map[string]string)
+			}
+			for key, value := range envVarMap {
+				config.DefaultEnvVars[key] = value
+			}
+		}
 	}
 }
 
@@ -162,6 +194,22 @@ func (c *Config) canonicalize() {
 			} else {
 				c.RunnerGroups[i].Image = c.DefaultImage
 			}
+		}
+
+		// Merge environment variables: default env vars + runner group specific env vars
+		// Runner group specific env vars override default ones
+		if c.RunnerGroups[i].EnvVars == nil {
+			c.RunnerGroups[i].EnvVars = make(map[string]string)
+		}
+
+		// Start with default environment variables
+		for key, value := range c.DefaultEnvVars {
+			c.RunnerGroups[i].EnvVars[key] = value
+		}
+
+		// Override with runner group specific environment variables
+		for key, value := range runnerConfig.EnvVars {
+			c.RunnerGroups[i].EnvVars[key] = value
 		}
 	}
 }

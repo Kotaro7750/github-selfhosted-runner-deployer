@@ -27,6 +27,7 @@ Sample configuration is provided in [`sample_config.yaml`](./sample_config.yaml)
 | `defaultLabels` | Default labels for all runner groups | No | `DEFAULT_LABELS` | `["linux", "x64"]` or `linux,x64` for environment variable |
 | `defaultNoDefaultLabels` | Disable default labels for all runner groups | No | `DEFAULT_NO_DEFAULT_LABELS` | `false` |
 | `defaultImage` | Default container image for all runner groups | No | `DEFAULT_IMAGE` | `ghcr.io/actions/actions-runner:latest` |
+| `defaultEnvVars` | Default environment variables for all runner groups (YAML map). Merged with environment variable; environment variable takes precedence | No | `DEFAULT_ENV_VARS` (JSON string) | `{"NODE_ENV": "production", "LOG_LEVEL": "info"}` |
 | `runnerGroups[].name` | Runner group name (alphanumeric, hyphens, underscores only) | Yes | - | `production-runners` |
 | `runnerGroups[].count` | Number of runners in this group | Yes | - | `3` |
 | `runnerGroups[].githubOwner` | Override GitHub owner for this group | No | - | `different-owner` |
@@ -35,6 +36,7 @@ Sample configuration is provided in [`sample_config.yaml`](./sample_config.yaml)
 | `runnerGroups[].labels` | Override labels for this group | No | - | `["gpu", "high-memory"]` |
 | `runnerGroups[].noDefaultLabels` | Disable default labels for this group | No | - | `true` |
 | `runnerGroups[].image` | Override container image for this group | No | - | `ghcr.io/actions/actions-runner:2.327.1` |
+| `runnerGroups[].envVars` | Environment variables for this runner group. Overrides defaultEnvVars for matching keys | No | - | `{"GPU_ENABLED": "true", "CUDA_VERSION": "11.8"}` |
 
 *Required either as default values or specified individually for each runner group.
 Environment variables take precedence over configuration file values.

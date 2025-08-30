@@ -118,9 +118,15 @@ func (r *Runner) Run(ctx context.Context, wg *sync.WaitGroup) {
 		configCmd += " --no-default-labels"
 	}
 
+	var envVars []string
+	for key, value := range r.RunnerGroupConfig.EnvVars {
+		envVars = append(envVars, fmt.Sprintf("%s=%s", key, value))
+	}
+
 	containerConfig := &container.Config{
 		Image:      image,
 		Entrypoint: []string{"sh", "-c", configCmd + "; ./run.sh"},
+		Env:        envVars,
 	}
 	hostConfig := &container.HostConfig{
 		AutoRemove: true,
